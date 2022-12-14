@@ -41,4 +41,4 @@ jobs:
           --password '${{ secrets.QUANTUM_REGISTRY_USERNAME }}'
           runway-public https://r.planetary-quantum.com/chartrepo/runway-public
       - run: helm search repo runway-public
-      - run: helm cm-push deploy/cert-manager-webhook-autodns runway
+      - run: helm cm-push deploy/cert-manager-webhook-autodns runway-public
