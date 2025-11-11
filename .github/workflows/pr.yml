@@ -15,10 +15,10 @@ jobs:
       - uses: goreleaser/goreleaser-action@v6
         with:
           args: build --snapshot --clean --single-target
+
   helm-lint:
     runs-on: ubuntu-latest
-    container:
-      image: ghcr.io/dtzar/helm-kubectl:3.8.2
     steps:
       - uses: actions/checkout@v3
+      - uses: azure/setup-helm@v4.3.0
       - run: helm lint deploy/cert-manager-webhook-autodns
