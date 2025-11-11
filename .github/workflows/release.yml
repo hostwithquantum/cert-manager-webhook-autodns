@@ -21,9 +21,9 @@ jobs:
           registry: r.planetary-quantum.com
           username: ${{ secrets.QUANTUM_REGISTRY_USERNAME }}
           password: ${{ secrets.QUANTUM_REGISTRY_PASSWORD }}
-      - uses: goreleaser/goreleaser-action@v3
+      - uses: goreleaser/goreleaser-action@v6
         with:
-          args: release --rm-dist
+          args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
   helm:
