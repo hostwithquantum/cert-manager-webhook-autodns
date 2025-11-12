@@ -1,6 +1,6 @@
 module github.com/derJD/cert-manager-webhook-autodns
 
-go 1.19
+go 1.25.1
 
 require (
 	github.com/jetstack/cert-manager v1.2.0
