@@ -16,6 +16,28 @@ jobs:
         with:
           args: build --snapshot --clean --single-target
 
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+      - name: Create test config
+        run: |
+          cat > testdata/autoDNS/config.json << 'EOF'
+          {
+              "zone": "example.com",
+              "nameserver": "ns1.example.com",
+              "context": "12345",
+              "url": "https://api.autodns.com/v1",
+              "username": "test",
+              "password": "test"
+          }
+          EOF
+      - name: Run tests
+        run: TEST_ZONE_NAME=example.com. make test
+
   helm-lint:
     runs-on: ubuntu-latest
     steps:
