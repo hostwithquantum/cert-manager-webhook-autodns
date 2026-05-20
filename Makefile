@@ -53,5 +53,5 @@ dev:
 	goreleaser build --single-target --snapshot --rm-dist
 
 .PHONY: build-docker
-build-docker: ## Build controller-next binary *and* docker image
+build-docker: ## Build binary *and* docker image
 	goreleaser r --snapshot --rm-dist --skip-publish

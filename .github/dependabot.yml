@@ -6,6 +6,16 @@ updates:
       interval: "daily"
     allow:
       - dependency-type: "direct"
+    groups:
+      k8s-deps:
+        patterns:
+          - "k8s.io/*"
+      go-deps:
+        exclude-patterns:
+          - "k8s.io/*"
+        update-types:
+          - minor
+          - patch
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
