@@ -1,3 +1,4 @@
+GO ?= $(shell which go)
 OS ?= $(shell go env GOOS)
 ARCH ?= $(shell go env GOARCH)
 
@@ -6,25 +7,38 @@ IMAGE_TAG := "latest"
 
 OUT := $(shell pwd)/_out
 
-KUBEBUILDER_VERSION=2.3.2
+KUBEBUILDER_VERSION=1.31.0
 
 $(shell mkdir -p "$(OUT)")
 
-test: _test/kubebuilder
-	go test -v .
+test: _test/kubebuilder-$(KUBEBUILDER_VERSION)-$(OS)-$(ARCH)/etcd \
+_test/kubebuilder-$(KUBEBUILDER_VERSION)-$(OS)-$(ARCH)/kube-apiserver \
+_test/kubebuilder-$(KUBEBUILDER_VERSION)-$(OS)-$(ARCH)/kubectl
+	TEST_ASSET_ETCD=_test/kubebuilder-$(KUBEBUILDER_VERSION)-$(OS)-$(ARCH)/etcd \
+	TEST_ASSET_KUBE_APISERVER=_test/kubebuilder-$(KUBEBUILDER_VERSION)-$(OS)-$(ARCH)/kube-apiserver \
+	TEST_ASSET_KUBECTL=_test/kubebuilder-$(KUBEBUILDER_VERSION)-$(OS)-$(ARCH)/kubectl \
+	$(GO) test -v .
 
-_test/kubebuilder:
-	curl -fsSL https://github.com/kubernetes-sigs/kubebuilder/releases/download/v$(KUBEBUILDER_VERSION)/kubebuilder_$(KUBEBUILDER_VERSION)_$(OS)_$(ARCH).tar.gz -o kubebuilder-tools.tar.gz
-	mkdir -p _test/kubebuilder
-	tar -xvf kubebuilder-tools.tar.gz
-	mv kubebuilder_$(KUBEBUILDER_VERSION)_$(OS)_$(ARCH)/bin _test/kubebuilder/
-	rm kubebuilder-tools.tar.gz
-	rm -R kubebuilder_$(KUBEBUILDER_VERSION)_$(OS)_$(ARCH)
+_test:
+	mkdir -p _test
+
+_test/kubebuilder-$(KUBEBUILDER_VERSION)-$(OS)-$(ARCH):
+	mkdir -p _test/kubebuilder-$(KUBEBUILDER_VERSION)-$(OS)-$(ARCH)
+
+_test/kubebuilder-$(KUBEBUILDER_VERSION)-$(OS)-$(ARCH).tar.gz: | _test
+	curl -fsSL https://github.com/kubernetes-sigs/controller-tools/releases/download/envtest-v$(KUBEBUILDER_VERSION)/envtest-v$(KUBEBUILDER_VERSION)-$(OS)-$(ARCH).tar.gz -o $@
+
+_test/kubebuilder-$(KUBEBUILDER_VERSION)-$(OS)-$(ARCH)/etcd \
+_test/kubebuilder-$(KUBEBUILDER_VERSION)-$(OS)-$(ARCH)/kube-apiserver \
+_test/kubebuilder-$(KUBEBUILDER_VERSION)-$(OS)-$(ARCH)/kubectl: \
+_test/kubebuilder-$(KUBEBUILDER_VERSION)-$(OS)-$(ARCH).tar.gz | \
+_test/kubebuilder-$(KUBEBUILDER_VERSION)-$(OS)-$(ARCH)
+	tar xfO $< controller-tools/envtest/$(notdir $@) > $@ && chmod +x $@
 
 clean: clean-kubebuilder
 
 clean-kubebuilder:
-	rm -Rf _test/kubebuilder
+	rm -Rf _test
 
 .PHONY: rendered-manifest.yaml
 rendered-manifest.yaml:
