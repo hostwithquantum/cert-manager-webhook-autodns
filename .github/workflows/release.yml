@@ -6,42 +6,78 @@ on:
     tags:
       - 'v*'
 
+permissions: {}
+
+env:
+  REGISTRY: r.planetary-quantum.com
+
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
     steps:
-      - uses: actions/checkout@v6
+      - id: load-registry-credentials
+        uses: 1password/load-secrets-action@92467eb28f72e8255933372f1e0707c567ce2259 # v4.0.0
+        with:
+          export-env: false
+        env:
+          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_RUNWAYOSS_SERVICE_ACCOUNT }}
+          REGISTRY_USERNAME: op://RunwayOSS/robot-harbor-runway-public/username
+          REGISTRY_PASSWORD: op://RunwayOSS/robot-harbor-runway-public/password
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           fetch-depth: 0
-      - uses: actions/setup-go@v6
+          persist-credentials: false
+      - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6
         with:
           go-version-file: go.mod
-      - uses: docker/login-action@v4
+          cache: false
+      - uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4
         with:
-          registry: r.planetary-quantum.com
-          username: ${{ secrets.QUANTUM_REGISTRY_USERNAME }}
-          password: ${{ secrets.QUANTUM_REGISTRY_PASSWORD }}
-      - uses: goreleaser/goreleaser-action@v7
+          registry: ${{ env.REGISTRY }}
+          username: ${{ steps.load-registry-credentials.outputs.REGISTRY_USERNAME }}
+          password: ${{ steps.load-registry-credentials.outputs.REGISTRY_PASSWORD }}
+      - uses: goreleaser/goreleaser-action@5daf1e915a5f0af01ddbcd89a43b8061ff4f1a89 # v7
         with:
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
   helm:
     needs: build
     runs-on: ubuntu-latest
-    container:
-      image: ghcr.io/dtzar/helm-kubectl:3.8.2
+    permissions:
+      contents: read
     steps:
-      - uses: actions/checkout@v6
-      - run: helm plugin install https://github.com/chartmuseum/helm-push.git
-      - name: "Add chart repo (r.planetary-quantum.com)"
-        run: >
-          helm repo add
-          runway-public https://r.planetary-quantum.com/chartrepo/runway-public
-      - run: helm search repo runway-public
-      - run: >
-          helm cm-push 
-          --username '${{ secrets.QUANTUM_REGISTRY_USERNAME }}'
-          --password '${{ secrets.QUANTUM_REGISTRY_PASSWORD }}'
-          deploy/cert-manager-webhook-autodns
-          runway-public
+      - id: load-registry-credentials
+        uses: 1password/load-secrets-action@92467eb28f72e8255933372f1e0707c567ce2259 # v4.0.0
+        with:
+          export-env: false
+        env:
+          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_RUNWAYOSS_SERVICE_ACCOUNT }}
+          REGISTRY_USERNAME: op://RunwayOSS/robot-harbor-runway-public/username
+          REGISTRY_PASSWORD: op://RunwayOSS/robot-harbor-runway-public/password
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
+      - uses: azure/setup-helm@dda3372f752e03dde6b3237bc9431cdc2f7a02a2 # v5.0.0
+        with:
+          version: v3.16.2
+      - run: |
+          echo "${REGISTRY_PASSWORD}" | helm registry login "${REGISTRY}" \
+            --username "${REGISTRY_USERNAME}" \
+            --password-stdin
+        env:
+          REGISTRY_USERNAME: ${{ steps.load-registry-credentials.outputs.REGISTRY_USERNAME }}
+          REGISTRY_PASSWORD: ${{ steps.load-registry-credentials.outputs.REGISTRY_PASSWORD }}
+      - run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          helm package \
+            --version "$VERSION" \
+            --app-version "$VERSION" \
+            deploy/cert-manager-webhook-autodns
+      - run: |
+          helm push cert-manager-webhook-autodns-*.tgz \
+            oci://${REGISTRY}/runway-public
