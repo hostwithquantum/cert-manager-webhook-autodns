@@ -16,6 +16,8 @@ updates:
         update-types:
           - minor
           - patch
+    cooldown:
+      default-days: 7
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
@@ -24,7 +26,11 @@ updates:
       actions-deps:
         patterns:
           - "*"
+    cooldown:
+      default-days: 7
   - package-ecosystem: "docker"
     directory: "/"
     schedule:
       interval: "weekly"
+    cooldown:
+      default-days: 7
