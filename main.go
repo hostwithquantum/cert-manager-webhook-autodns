@@ -1,21 +1,20 @@
 package main
 
 import (
-	"bytes"
+	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
-	"net/http"
 	"os"
 
 	extapi "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
-	"k8s.io/klog"
 
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 
 	"github.com/cert-manager/cert-manager/pkg/acme/webhook/apis/acme/v1alpha1"
 	"github.com/cert-manager/cert-manager/pkg/acme/webhook/cmd"
+
+	"github.com/libdns/autodns/sdk"
 )
 
 var GroupName = os.Getenv("GROUP_NAME")
@@ -26,15 +25,15 @@ func main() {
 	}
 
 	cmd.RunWebhookServer(GroupName,
-		&autoDNSProviderSolver{},
+		&AutoDNSProviderSolver{},
 	)
 }
 
-type autoDNSProviderSolver struct {
+type AutoDNSProviderSolver struct {
 	client *kubernetes.Clientset
 }
 
-type autoDNSProviderConfig struct {
+type solverConfig struct {
 	Zone       string `json:"zone"`
 	NameServer string `json:"nameserver"`
 	Context    string `json:"context"`
@@ -43,26 +42,11 @@ type autoDNSProviderConfig struct {
 	URL        string `json:"url"`
 }
 
-type AutoDNSData struct {
-	Origin             string                      `json:"origin"`
-	ResourceRecord     []AutoDNSResourceRecordData `json:"resourceRecord,omitempty"`
-	ResourceRecordsAdd []AutoDNSResourceRecordData `json:"resourceRecordsAdd,omitempty"`
-	ResourceRecordsRem []AutoDNSResourceRecordData `json:"resourceRecordsRem,omitempty"`
-}
-
-type AutoDNSResourceRecordData struct {
-	Name  string `json:"name"`
-	Value string `json:"value"`
-	Type  string `json:"type"`
-	Pref  int64  `json:"pref,omitempty"`
-	TTL   int64  `json:"ttl,omitempty"`
-}
-
-func (c *autoDNSProviderSolver) Name() string {
+func (c *AutoDNSProviderSolver) Name() string {
 	return "autoDNS"
 }
 
-func (c *autoDNSProviderSolver) Present(ch *v1alpha1.ChallengeRequest) error {
+func (c *AutoDNSProviderSolver) Present(ch *v1alpha1.ChallengeRequest) error {
 	cfg, err := loadConfig(ch.Config)
 	if err != nil {
 		return err
@@ -71,25 +55,28 @@ func (c *autoDNSProviderSolver) Present(ch *v1alpha1.ChallengeRequest) error {
 	if cfg.Zone == "" {
 		cfg.Zone = ch.ResolvedZone
 	}
-	jsonData, err := json.Marshal(AutoDNSData{
-		Origin: ch.ResolvedZone,
-		ResourceRecordsAdd: []AutoDNSResourceRecordData{
+
+	client := &sdk.SDK{
+		Username: cfg.Username,
+		Password: cfg.Password,
+		Context:  cfg.Context,
+		Endpoint: cfg.URL,
+	}
+
+	_, err = client.PatchZone(context.TODO(), cfg.Zone, cfg.NameServer, sdk.ZonePatch{
+		ResourceRecordsAdd: []sdk.ZoneRecord{
 			{
 				Name:  ch.ResolvedFQDN,
-				Value: ch.Key,
-				TTL:   60,
 				Type:  "TXT",
+				TTL:   60,
+				Value: ch.Key,
 			},
 		},
 	})
-	if err != nil {
-		return err
-	}
-
-	return callApi("PATCH", jsonData, cfg)
+	return err
 }
 
-func (c *autoDNSProviderSolver) CleanUp(ch *v1alpha1.ChallengeRequest) error {
+func (c *AutoDNSProviderSolver) CleanUp(ch *v1alpha1.ChallengeRequest) error {
 	cfg, err := loadConfig(ch.Config)
 	if err != nil {
 		return err
@@ -98,25 +85,28 @@ func (c *autoDNSProviderSolver) CleanUp(ch *v1alpha1.ChallengeRequest) error {
 	if cfg.Zone == "" {
 		cfg.Zone = ch.ResolvedZone
 	}
-	jsonData, err := json.Marshal(AutoDNSData{
-		Origin: ch.ResolvedZone,
-		ResourceRecordsRem: []AutoDNSResourceRecordData{
+
+	client := &sdk.SDK{
+		Username: cfg.Username,
+		Password: cfg.Password,
+		Context:  cfg.Context,
+		Endpoint: cfg.URL,
+	}
+
+	_, err = client.PatchZone(context.TODO(), cfg.Zone, cfg.NameServer, sdk.ZonePatch{
+		ResourceRecordsRem: []sdk.ZoneRecord{
 			{
 				Name:  ch.ResolvedFQDN,
-				Value: ch.Key,
-				TTL:   60,
 				Type:  "TXT",
+				TTL:   60,
+				Value: ch.Key,
 			},
 		},
 	})
-	if err != nil {
-		return err
-	}
-
-	return callApi("PATCH", jsonData, cfg)
+	return err
 }
 
-func (c *autoDNSProviderSolver) Initialize(kubeClientConfig *rest.Config, stopCh <-chan struct{}) error {
+func (c *AutoDNSProviderSolver) Initialize(kubeClientConfig *rest.Config, stopCh <-chan struct{}) error {
 	cl, err := kubernetes.NewForConfig(kubeClientConfig)
 	if err != nil {
 		return err
@@ -127,48 +117,14 @@ func (c *autoDNSProviderSolver) Initialize(kubeClientConfig *rest.Config, stopCh
 	return nil
 }
 
-func loadConfig(cfgJSON *extapi.JSON) (autoDNSProviderConfig, error) {
-	cfg := autoDNSProviderConfig{}
+func loadConfig(cfgJSON *extapi.JSON) (*solverConfig, error) {
+	cfg := solverConfig{}
 	if cfgJSON == nil {
-		return cfg, nil
+		return nil, fmt.Errorf("missing config")
 	}
 	if err := json.Unmarshal(cfgJSON.Raw, &cfg); err != nil {
-		return cfg, fmt.Errorf("error decoding solver config: %v", err)
+		return nil, fmt.Errorf("error decoding solver config: %v", err)
 	}
 
-	return cfg, nil
-}
-
-func callApi(method string, body []byte, config autoDNSProviderConfig) error {
-	url := config.URL + "/zone/" + config.Zone + "/" + config.NameServer
-	req, err := http.NewRequest(method, url, bytes.NewBuffer(body))
-	if err != nil {
-		return fmt.Errorf("unable to execute request %v", err)
-	}
-
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("X-Domainrobot-Context", config.Context)
-	req.SetBasicAuth(config.Username, config.Password)
-
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		return err
-	}
-
-	defer func() {
-		err := resp.Body.Close()
-		if err != nil {
-			klog.Fatal(err)
-		}
-	}()
-
-	//respBody, _ := ioutil.ReadAll(resp.Body)
-	if resp.StatusCode == http.StatusOK {
-		return nil
-	}
-
-	text := "Error calling API status: " + resp.Status + " url: " + url + " method: " + method
-	klog.Error(text)
-	return errors.New(text)
+	return &cfg, nil
 }
