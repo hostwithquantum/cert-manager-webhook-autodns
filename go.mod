@@ -1,4 +1,4 @@
-module github.com/derJD/cert-manager-webhook-autodns
+module github.com/hostwithquantum/cert-manager-webhook-autodns
 
 go 1.25.1
 
@@ -7,7 +7,6 @@ require (
 	github.com/miekg/dns v1.1.50
 	k8s.io/apiextensions-apiserver v0.26.4
 	k8s.io/client-go v0.26.4
-	k8s.io/klog v1.0.0
 )
 
 require (
@@ -44,6 +43,7 @@ require (
 	github.com/inconshreveable/mousetrap v1.0.1 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
+	github.com/libdns/autodns v0.0.0-20260521121040-c82196d77ac9
 	github.com/mailru/easyjson v0.7.6 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.4 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect

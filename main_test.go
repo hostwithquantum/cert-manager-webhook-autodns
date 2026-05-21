@@ -1,4 +1,4 @@
-package main
+package main_test
 
 import (
 	"encoding/json"
@@ -12,7 +12,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/libdns/autodns/sdk"
 	mdns "github.com/miekg/dns"
+
+	webhook "github.com/hostwithquantum/cert-manager-webhook-autodns"
 
 	"github.com/cert-manager/cert-manager/test/acme/dns"
 )
@@ -98,7 +101,7 @@ func startAPIServer(t *testing.T, store *recordStore) *httptest.Server {
 			http.Error(w, "unexpected method "+r.Method, http.StatusMethodNotAllowed)
 			return
 		}
-		var body AutoDNSData
+		var body sdk.ZonePatch
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 			t.Errorf("decode request body: %v", err)
 			http.Error(w, err.Error(), http.StatusBadRequest)
@@ -114,7 +117,9 @@ func startAPIServer(t *testing.T, store *recordStore) *httptest.Server {
 				store.remove(rec.Name, rec.Value)
 			}
 		}
+		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"status":{"type":"SUCCESS"},"data":[]}`))
 	}))
 }
 
@@ -143,7 +148,7 @@ func TestRunsSuite(t *testing.T) {
 		t.Fatalf("write %s: %v", configPath, err)
 	}
 
-	fixture := dns.NewFixture(&autoDNSProviderSolver{},
+	fixture := dns.NewFixture(&webhook.AutoDNSProviderSolver{},
 		dns.SetResolvedZone(zone),
 		dns.SetResolvedFQDN(fqdn),
 		dns.SetAllowAmbientCredentials(false),
@@ -152,6 +157,7 @@ func TestRunsSuite(t *testing.T) {
 		dns.SetUseAuthoritative(false),
 		dns.SetPollInterval(500*time.Millisecond),
 		dns.SetPropagationLimit(10*time.Second),
+		dns.SetStrict(true),
 	)
 
 	fixture.RunConformance(t)
