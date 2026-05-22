@@ -1,23 +1,14 @@
 # ACME webhook for AutoDNS API
 
-_This is a fork that has been updated for Go 1.19._
-
 Solver enabling cert-manager to interact with [AutoDNS API](https://help.internetx.com/display/APIXMLEN/JSON+API+Basics).
 
-> This Solver took heavy inspiration from [cert-manager-webhook-hetzner](https://github.com/vadimkim/cert-manager-webhook-hetzner)
-
-## Requirements
-
-* [go](https://golang.org/) >= 1.13.0
-* [helm](https://helm.sh/) >= v3.0.0
-* [kubernetes](https://kubernetes.io/) >= v1.14.0
-* [cert-manager](https://cert-manager.io/) >= 0.12.0
+> [!NOTE]
+> This started as [a fork](https://github.com/derJD/cert-manager-webhook-autodns/) but is now maintained by Planetary Quantum GmbH.
 
 ## Installation
 
-### cert-manager
-
-Follow the [instructions](https://cert-manager.io/docs/installation/) using the cert-manager documentation to install it within your cluster.
+- a Kubernetes cluster (tested with >=1.31)
+- install cert-manager (tested with 1.19.x)
 
 ### Webhook
 
@@ -28,16 +19,17 @@ Follow the [instructions](https://cert-manager.io/docs/installation/) using the 
 helm install --namespace cert-manager cert-manager-webhook-autodns deploy/cert-manager-webhook-autodns
 ```
 
-Or use our helm repository:
+Or pull the chart directly from our OCI registry:
+
+> [!IMPORTANT]
+> Replace `a.b.c` with a tag from this repository.
 
 ```bash
-# discover repository
-helm repo add runway-public https://r.planetary-quantum.com/chartrepo/runway-public
-# install from it
-helm upgrade --install \
+helm upgrade --install \
   --create-namespace --namespace cert-manager \
   --version a.b.c \
-  cert-manager-webhook-autodns runway-public/cert-manager-webhook-autodns
+  cert-manager-webhook-autodns \
+  oci://r.planetary-quantum.com/runway-public/cert-manager-webhook-autodns
 ```
 
 **Note**: The kubernetes resources used to install the Webhook should be deployed within the same namespace as the **cert-manager**.
@@ -55,7 +47,7 @@ Values for customization via *values.yaml* or *--set* can be seen [here](deploy/
 Create a `ClusterIssuer` or `Issuer` resource as following:
 
 ```yaml
-apiVersion: cert-manager.io/v1alpha2
+apiVersion: cert-manager.io/v1
 kind: ClusterIssuer
 metadata:
   name: letsencrypt-staging
@@ -92,7 +84,7 @@ spec:
 * Finally you can create certificates, for example:
 
 ```yaml
-apiVersion: cert-manager.io/v1alpha2
+apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
   name: example-cert
