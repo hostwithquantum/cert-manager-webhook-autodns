@@ -14,6 +14,7 @@ import (
 
 	"github.com/libdns/autodns/sdk"
 	mdns "github.com/miekg/dns"
+	"github.com/stretchr/testify/require"
 
 	webhook "github.com/hostwithquantum/cert-manager-webhook-autodns"
 
@@ -127,9 +128,8 @@ func TestRunsSuite(t *testing.T) {
 	store := &recordStore{records: make(map[string][]string)}
 
 	dnsAddr, dnsShutdown, err := startDNSServer(store)
-	if err != nil {
-		t.Fatalf("start dns server: %v", err)
-	}
+	require.NoError(t, err, "start dns server: %v", err)
+
 	defer func() { _ = dnsShutdown() }()
 
 	apiServer := startAPIServer(t, store)
@@ -144,9 +144,9 @@ func TestRunsSuite(t *testing.T) {
     "username": "test",
     "password": "test"
 }`, apiServer.URL)
-	if err := os.WriteFile(configPath, []byte(cfg), 0644); err != nil {
-		t.Fatalf("write %s: %v", configPath, err)
-	}
+
+	err = os.WriteFile(configPath, []byte(cfg), 0644)
+	require.NoError(t, err, "write %s: %v", configPath, err)
 
 	fixture := dns.NewFixture(&webhook.AutoDNSProviderSolver{},
 		dns.SetResolvedZone(zone),
