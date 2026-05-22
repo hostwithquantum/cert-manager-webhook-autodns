@@ -29,7 +29,17 @@ helm upgrade --install \
   --create-namespace --namespace cert-manager \
   --version a.b.c \
   cert-manager-webhook-autodns \
-  oci://r.planetary-quantum.com/runway-public/cert-manager-webhook-autodns
+  oci://r.planetary-quantum.com/runway-public/charts/cert-manager-webhook-autodns
+```
+
+#### Pre-release (dev) builds
+
+Every merge to `main` publishes a dev image (`:dev` and `:<version>-<short-sha>`) and a matching chart tagged `<chart-version>-dev.<short-sha>` that pins to the SHA-tagged image. Useful for verifying a change before cutting a release tag.
+
+```bash
+helm pull \
+  --version 0.2.0-dev.abc1234 \
+  oci://r.planetary-quantum.com/runway-public/charts/cert-manager-webhook-autodns
 ```
 
 **Note**: The kubernetes resources used to install the Webhook should be deployed within the same namespace as the **cert-manager**.
