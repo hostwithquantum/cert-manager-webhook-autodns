@@ -1,0 +1,106 @@
+---
+name: dev
+
+on:
+  push:
+    branches:
+      - main
+
+permissions: {}
+
+env:
+  REGISTRY: r.planetary-quantum.com
+  IMAGE: r.planetary-quantum.com/runway-public/cert-manager-webhook-autodns
+
+jobs:
+  image:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      image_tag: ${{ steps.publish.outputs.image_tag }}
+      short_sha: ${{ steps.publish.outputs.short_sha }}
+    steps:
+      - id: load-registry-credentials
+        uses: 1password/load-secrets-action@92467eb28f72e8255933372f1e0707c567ce2259 # v4.0.0
+        with:
+          export-env: false
+        env:
+          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_RUNWAYOSS_SERVICE_ACCOUNT }}
+          REGISTRY_USERNAME: op://RunwayOSS/robot-harbor-runway-public/username
+          REGISTRY_PASSWORD: op://RunwayOSS/robot-harbor-runway-public/password
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6
+        with:
+          go-version-file: go.mod
+          cache: false
+      - uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ steps.load-registry-credentials.outputs.REGISTRY_USERNAME }}
+          password: ${{ steps.load-registry-credentials.outputs.REGISTRY_PASSWORD }}
+      - uses: goreleaser/goreleaser-action@5daf1e915a5f0af01ddbcd89a43b8061ff4f1a89 # v7
+        with:
+          args: release --snapshot --clean
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - id: publish
+        run: |
+          SHORT_SHA=$(git rev-parse --short HEAD)
+          VERSION=$(jq -r .version dist/metadata.json)
+          IMAGE_TAG="${VERSION}-${SHORT_SHA}"
+          SRC_IMAGE=$(jq -r '[.[] | select(.type=="Docker Image" and .goarch=="amd64")][0].name' dist/artifacts.json)
+          if [ -z "$SRC_IMAGE" ] || [ "$SRC_IMAGE" = "null" ]; then
+            echo "no amd64 Docker Image artifact found in dist/artifacts.json"
+            exit 1
+          fi
+          docker tag "$SRC_IMAGE" "${IMAGE}:dev"
+          docker tag "$SRC_IMAGE" "${IMAGE}:${IMAGE_TAG}"
+          docker push "${IMAGE}:dev"
+          docker push "${IMAGE}:${IMAGE_TAG}"
+          echo "image_tag=${IMAGE_TAG}" >> "$GITHUB_OUTPUT"
+          echo "short_sha=${SHORT_SHA}" >> "$GITHUB_OUTPUT"
+
+  helm:
+    needs: image
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - id: load-registry-credentials
+        uses: 1password/load-secrets-action@92467eb28f72e8255933372f1e0707c567ce2259 # v4.0.0
+        with:
+          export-env: false
+        env:
+          OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_RUNWAYOSS_SERVICE_ACCOUNT }}
+          REGISTRY_USERNAME: op://RunwayOSS/robot-harbor-runway-public/username
+          REGISTRY_PASSWORD: op://RunwayOSS/robot-harbor-runway-public/password
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
+      - uses: azure/setup-helm@dda3372f752e03dde6b3237bc9431cdc2f7a02a2 # v5.0.0
+        with:
+          version: v3.16.2
+      - run: |
+          echo "${REGISTRY_PASSWORD}" | helm registry login "${REGISTRY}" \
+            --username "${REGISTRY_USERNAME}" \
+            --password-stdin
+        env:
+          REGISTRY_USERNAME: ${{ steps.load-registry-credentials.outputs.REGISTRY_USERNAME }}
+          REGISTRY_PASSWORD: ${{ steps.load-registry-credentials.outputs.REGISTRY_PASSWORD }}
+      - run: |
+          CHART_BASE_VERSION=$(yq '.version' deploy/cert-manager-webhook-autodns/Chart.yaml)
+          CHART_VERSION="${CHART_BASE_VERSION}-dev.${SHORT_SHA}"
+          yq -i ".image.tag = \"${IMAGE_TAG}\"" deploy/cert-manager-webhook-autodns/values.yaml
+          helm package \
+            --version "$CHART_VERSION" \
+            --app-version "$IMAGE_TAG" \
+            deploy/cert-manager-webhook-autodns
+          helm push cert-manager-webhook-autodns-*.tgz \
+            oci://${REGISTRY}/runway-public
+        env:
+          IMAGE_TAG: ${{ needs.image.outputs.image_tag }}
+          SHORT_SHA: ${{ needs.image.outputs.short_sha }}
