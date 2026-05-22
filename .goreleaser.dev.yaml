@@ -11,10 +11,8 @@ builds:
     ldflags: '-w -extldflags "-static"'
     goos:
       - linux
-      - darwin
     goarch:
       - amd64
-      - arm64
 archives:
   - id: default
     name_template: >-
@@ -27,7 +25,6 @@ archives:
 dockers_v2:
   - images:
       - 'r.planetary-quantum.com/runway-public/cert-manager-webhook-autodns'
-      - 'ghcr.io/hostwithquantum/cert-manager-webhook-autodns'
     ids:
       - webhook
     dockerfile: Dockerfile
@@ -43,7 +40,6 @@ dockers_v2:
       "org.opencontainers.image.source": "{{.GitURL}}"
     platforms:
       - linux/amd64
-      - linux/arm64
 checksum:
   name_template: 'checksums.txt'
 snapshot:

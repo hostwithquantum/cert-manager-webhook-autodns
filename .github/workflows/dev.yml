@@ -44,7 +44,7 @@ jobs:
           password: ${{ steps.load-registry-credentials.outputs.REGISTRY_PASSWORD }}
       - uses: goreleaser/goreleaser-action@5daf1e915a5f0af01ddbcd89a43b8061ff4f1a89 # v7
         with:
-          args: release --snapshot --clean
+          args: release --snapshot --clean -f .goreleaser.dev.yaml
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - id: publish
@@ -52,9 +52,9 @@ jobs:
           SHORT_SHA=$(git rev-parse --short HEAD)
           VERSION=$(jq -r .version dist/metadata.json)
           IMAGE_TAG="${VERSION}-${SHORT_SHA}"
-          SRC_IMAGE=$(jq -r '[.[] | select(.type=="Docker Image" and .goarch=="amd64")][0].name' dist/artifacts.json)
+          SRC_IMAGE=$(jq -r '[.[] | select(.type=="Docker Image")][0].name' dist/artifacts.json)
           if [ -z "$SRC_IMAGE" ] || [ "$SRC_IMAGE" = "null" ]; then
-            echo "no amd64 Docker Image artifact found in dist/artifacts.json"
+            echo "no Docker Image artifact found in dist/artifacts.json"
             exit 1
           fi
           docker tag "$SRC_IMAGE" "${IMAGE}:dev"
