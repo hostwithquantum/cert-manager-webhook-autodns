@@ -100,7 +100,7 @@ jobs:
             --app-version "$IMAGE_TAG" \
             deploy/cert-manager-webhook-autodns
           helm push cert-manager-webhook-autodns-*.tgz \
-            oci://${REGISTRY}/runway-public
+            oci://${REGISTRY}/runway-public/charts
         env:
           IMAGE_TAG: ${{ needs.image.outputs.image_tag }}
           SHORT_SHA: ${{ needs.image.outputs.short_sha }}
