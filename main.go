@@ -5,10 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"time"
 
 	extapi "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
-
-	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 
 	"github.com/cert-manager/cert-manager/pkg/acme/webhook/apis/acme/v1alpha1"
@@ -29,9 +28,7 @@ func main() {
 	)
 }
 
-type AutoDNSProviderSolver struct {
-	client *kubernetes.Clientset
-}
+type AutoDNSProviderSolver struct{}
 
 type solverConfig struct {
 	Zone       string `json:"zone"`
@@ -63,7 +60,10 @@ func (c *AutoDNSProviderSolver) Present(ch *v1alpha1.ChallengeRequest) error {
 		Endpoint: cfg.URL,
 	}
 
-	_, err = client.PatchZone(context.TODO(), cfg.Zone, cfg.NameServer, sdk.ZonePatch{
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	_, err = client.PatchZone(ctx, cfg.Zone, cfg.NameServer, sdk.ZonePatch{
 		ResourceRecordsAdd: []sdk.ZoneRecord{
 			{
 				Name:  ch.ResolvedFQDN,
@@ -93,7 +93,10 @@ func (c *AutoDNSProviderSolver) CleanUp(ch *v1alpha1.ChallengeRequest) error {
 		Endpoint: cfg.URL,
 	}
 
-	_, err = client.PatchZone(context.TODO(), cfg.Zone, cfg.NameServer, sdk.ZonePatch{
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	_, err = client.PatchZone(ctx, cfg.Zone, cfg.NameServer, sdk.ZonePatch{
 		ResourceRecordsRem: []sdk.ZoneRecord{
 			{
 				Name:  ch.ResolvedFQDN,
@@ -106,14 +109,7 @@ func (c *AutoDNSProviderSolver) CleanUp(ch *v1alpha1.ChallengeRequest) error {
 	return err
 }
 
-func (c *AutoDNSProviderSolver) Initialize(kubeClientConfig *rest.Config, stopCh <-chan struct{}) error {
-	cl, err := kubernetes.NewForConfig(kubeClientConfig)
-	if err != nil {
-		return err
-	}
-
-	c.client = cl
-
+func (c *AutoDNSProviderSolver) Initialize(_ *rest.Config, _ <-chan struct{}) error {
 	return nil
 }
 

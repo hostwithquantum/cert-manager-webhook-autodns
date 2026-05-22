@@ -17,7 +17,7 @@ import (
 
 	webhook "github.com/hostwithquantum/cert-manager-webhook-autodns"
 
-	"github.com/cert-manager/cert-manager/test/acme/dns"
+	dns "github.com/cert-manager/cert-manager/test/acme"
 )
 
 var (
