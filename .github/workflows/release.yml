@@ -39,6 +39,11 @@ jobs:
           registry: ${{ env.REGISTRY }}
           username: ${{ steps.load-registry-credentials.outputs.REGISTRY_USERNAME }}
           password: ${{ steps.load-registry-credentials.outputs.REGISTRY_PASSWORD }}
+      - uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4.1.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
       - uses: goreleaser/goreleaser-action@5daf1e915a5f0af01ddbcd89a43b8061ff4f1a89 # v7
         with:
           args: release --clean
@@ -50,6 +55,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      packages: write
     steps:
       - id: load-registry-credentials
         uses: 1password/load-secrets-action@92467eb28f72e8255933372f1e0707c567ce2259 # v4.0.0
@@ -73,6 +79,13 @@ jobs:
           REGISTRY_USERNAME: ${{ steps.load-registry-credentials.outputs.REGISTRY_USERNAME }}
           REGISTRY_PASSWORD: ${{ steps.load-registry-credentials.outputs.REGISTRY_PASSWORD }}
       - run: |
+          echo "${GITHUB_TOKEN}" | helm registry login "ghcr.io" \
+            --username "${REGISTRY_USERNAME}" \
+            --password-stdin
+        env:
+          REGISTRY_USERNAME: ${{ github.actor }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - run: |
           VERSION="${GITHUB_REF_NAME#v}"
           helm package \
             --version "$VERSION" \
@@ -81,3 +94,5 @@ jobs:
       - run: |
           helm push cert-manager-webhook-autodns-*.tgz \
             oci://${REGISTRY}/runway-public/charts
+          helm push cert-manager-webhook-autodns-*.tgz \
+            oci://ghcr.io/hostwithquantum/charts

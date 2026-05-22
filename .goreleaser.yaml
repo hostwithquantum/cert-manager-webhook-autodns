@@ -24,25 +24,26 @@ archives:
       {{- else if eq .Arch "386" }}i386
       {{- else }}{{ .Arch }}{{ end }}
       {{- if .Arm }}v{{ .Arm }}{{ end }}
-dockers:
-  - id: amd64
-    image_templates:
-      - 'r.planetary-quantum.com/runway-public/cert-manager-webhook-autodns:{{ .Tag }}-amd64'
+dockers_v2:
+  - images:
+      - 'r.planetary-quantum.com/runway-public/cert-manager-webhook-autodns'
+      - 'ghcr.io/hostwithquantum/cert-manager-webhook-autodns'
+    ids:
+      - webhook
     dockerfile: Dockerfile
-    use: buildx
-    build_flag_templates:
+    tags:
+      - "{{ .Tag }}"
+    flags:
       - "--pull"
-      - "--label=org.opencontainers.image.created={{.Date}}"
-      - "--label=org.opencontainers.image.name={{.ProjectName}}"
-      - "--label=org.opencontainers.image.revision={{.FullCommit}}"
-      - "--label=org.opencontainers.image.version={{.Version}}"
-      - "--label=org.opencontainers.image.source={{.GitURL}}"
-      - "--platform=linux/amd64"
-    goarch: amd64
-docker_manifests:
-  - name_template: r.planetary-quantum.com/runway-public/cert-manager-webhook-autodns:{{ .Tag }}
-    image_templates:
-      - r.planetary-quantum.com/runway-public/cert-manager-webhook-autodns:{{ .Tag }}-amd64
+    labels:
+      "org.opencontainers.image.created": "{{.Date}}"
+      "org.opencontainers.image.name": "{{.ProjectName}}"
+      "org.opencontainers.image.revision": "{{.FullCommit}}"
+      "org.opencontainers.image.version": "{{.Version}}"
+      "org.opencontainers.image.source": "{{.GitURL}}"
+    platforms:
+      - linux/amd64
+      - linux/arm64
 checksum:
   name_template: 'checksums.txt'
 snapshot:
