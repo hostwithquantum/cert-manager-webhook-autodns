@@ -40,7 +40,7 @@ type solverConfig struct {
 }
 
 func (c *AutoDNSProviderSolver) Name() string {
-	return "autoDNS"
+	return "autodns"
 }
 
 func (c *AutoDNSProviderSolver) Present(ch *v1alpha1.ChallengeRequest) error {

@@ -5,6 +5,7 @@ go 1.25.1
 require (
 	github.com/cert-manager/cert-manager v1.19.5
 	github.com/miekg/dns v1.1.72
+	github.com/stretchr/testify v1.11.1
 	k8s.io/apiextensions-apiserver v0.34.1
 	k8s.io/client-go v0.34.1
 )
@@ -19,7 +20,6 @@ require (
 	github.com/google/btree v1.1.3 // indirect
 	github.com/google/gnostic-models v0.7.0 // indirect
 	github.com/kylelemons/godebug v1.1.0 // indirect
-	github.com/libdns/libdns v1.1.1 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
