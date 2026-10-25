@@ -24,6 +24,7 @@ jobs:
       - id: load-registry-credentials
         uses: 1password/load-secrets-action@3a12b0ab99d9cd590a3e9b5a90ea017210ed9556 # v4.0.1
         with:
+          version: ${{ vars.OP_VERSION }}
           export-env: false
         env:
           OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_RUNWAYOSS_SERVICE_ACCOUNT }}
@@ -73,6 +74,7 @@ jobs:
       - id: load-registry-credentials
         uses: 1password/load-secrets-action@3a12b0ab99d9cd590a3e9b5a90ea017210ed9556 # v4.0.1
         with:
+          version: ${{ vars.OP_VERSION }}
           export-env: false
         env:
           OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_RUNWAYOSS_SERVICE_ACCOUNT }}

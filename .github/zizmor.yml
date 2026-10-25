@@ -1,0 +1,7 @@
+rules:
+  unpinned-tools:
+    ignore:
+      - dev.yml:27:11
+      - dev.yml:77:11
+      - release.yml:24:11
+      - release.yml:66:11
