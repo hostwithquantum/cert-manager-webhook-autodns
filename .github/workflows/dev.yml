@@ -29,7 +29,7 @@ jobs:
           OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_RUNWAYOSS_SERVICE_ACCOUNT }}
           REGISTRY_USERNAME: op://RunwayOSS/robot-harbor-runway-public/username
           REGISTRY_PASSWORD: op://RunwayOSS/robot-harbor-runway-public/password
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v6
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           fetch-depth: 0
           persist-credentials: false
@@ -42,7 +42,7 @@ jobs:
           registry: ${{ env.REGISTRY }}
           username: ${{ steps.load-registry-credentials.outputs.REGISTRY_USERNAME }}
           password: ${{ steps.load-registry-credentials.outputs.REGISTRY_PASSWORD }}
-      - uses: goreleaser/goreleaser-action@f06c13b6b1a9625abc9e6e439d9c05a8f2190e94 # v7
+      - uses: goreleaser/goreleaser-action@f06c13b6b1a9625abc9e6e439d9c05a8f2190e94 # v7.2.3
         with:
           args: release --snapshot --clean -f .goreleaser.dev.yaml
         env:
@@ -78,7 +78,7 @@ jobs:
           OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.OP_RUNWAYOSS_SERVICE_ACCOUNT }}
           REGISTRY_USERNAME: op://RunwayOSS/robot-harbor-runway-public/username
           REGISTRY_PASSWORD: op://RunwayOSS/robot-harbor-runway-public/password
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v6
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           persist-credentials: false
       - uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5.0.1
